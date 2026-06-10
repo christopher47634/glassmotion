@@ -210,22 +210,33 @@ User describes what they want
 
 ## 🚀 Getting Started
 
-> **前置依赖**: Node.js, Python 3, FFmpeg, Chromium (snap)
+> **前置依赖**: Node.js, Python 3, FFmpeg, Chromium
 
-GlassMotion 是 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 的 skill 插件，运行在 AI Agent 工作流中。
+### 一键安装（推荐）
 
 ```bash
-# 1. 安装 Hermes Agent
-curl -sSL https://hermes-agent.nousresearch.com/install | bash
-
-# 2. 加载 GlassMotion skill
-hermes skills install glassmotion
-
-# 3. 描述你的视频需求
-hermes "做一个关于GPT-5的科普短视频，45秒，深色科技风"
+curl -fsSL https://raw.githubusercontent.com/christopher47634/glassmotion/main/install.sh | bash
 ```
 
-### 手动使用（无需 Hermes）
+安装完成后，直接用自然语言描述你的视频需求：
+
+```bash
+# 加载 skill，描述需求
+hermes -s mode2-hyperframes "做一个关于GPT-5的科普短视频，45秒，深色科技风"
+
+# 或使用科普视频默认风格
+hermes -s popular-science-video-style "做一个Claude新模型的科普"
+```
+
+### 通过 Hermes Skills 安装
+
+如果你已经安装了 [Hermes Agent](https://github.com/NousResearch/hermes-agent)：
+
+```bash
+hermes skills install https://raw.githubusercontent.com/christopher47634/glassmotion/main/skills/mode2-hyperframes/SKILL.md
+```
+
+### 手动安装（无需 Hermes）
 
 ```bash
 # 克隆仓库
@@ -233,10 +244,9 @@ git clone https://github.com/christopher47634/glassmotion.git
 cd glassmotion
 
 # 编辑你的场景 HTML
-vim scenes/scene-01.html
+vim skills/mode2-hyperframes/templates/starter.html
 
-# 渲染
-python3 render.py --scenes scenes/ --output output.mp4
+# 按照 skills/mode2-hyperframes/SKILL.md 的流程渲染
 ```
 
 ## 📁 Project Structure
