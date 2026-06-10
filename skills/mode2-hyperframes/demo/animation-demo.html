@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode2 动画库演示 - 专业动效设计</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <style>
+        :root {
+            --ink: #171717;
+            --canvas: #ffffff;
+            --canvas-soft: #fafafa;
+            --hairline: #ebebeb;
+            --body: #4d4d4d;
+            --link: #0070f3;
+            --primary: #171717;
+            --on-primary: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--canvas);
+            color: var(--ink);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* 头部导航 */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--hairline);
+            height: 64px;
+            display: flex;
+            align-items: center;
+        }
+
+        .header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--ink);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            color: var(--body);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--ink);
+        }
+
+        /* 英雄区域 */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #50e3c2 0%, #007cf0 25%, #ff0080 50%, #f9cb28 75%, #50e3c2 100%);
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--canvas-soft);
+            border: 1px solid var(--hairline);
+            border-radius: 100px;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: var(--body);
+            margin-bottom: 32px;
+        }
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 600;
+            letter-spacing: -2.4px;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: var(--ink);
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--body);
+            max-width: 600px;
+            margin: 0 auto 40px;
+            line-height: 1.5;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            padding: 0 24px;
+            border-radius: 100px;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--on-primary);
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--canvas);
+            color: var(--ink);
+            border: 1px solid var(--hairline);
+        }
+
+        .btn-secondary:hover {
+            background: var(--canvas-soft);
+            transform: translateY(-1px);
+        }
+
+        /* 特性区域 */
+        .features {
+            padding: 80px 0;
+            background: var(--canvas-soft);
+        }
+
+        .section-title {
+            font-size: 40px;
+            font-weight: 600;
+            letter-spacing: -1.6px;
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--ink);
+        }
+
+        .section-subtitle {
+            font-size: 18px;
+            color: var(--body);
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 60px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--canvas);
+            border: 1px solid var(--hairline);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #50e3c2, #0070f3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 24px;
+        }
+
+        .feature-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--ink);
+        }
+
+        .feature-desc {
+            font-size: 16px;
+            color: var(--body);
+            line-height: 1.6;
+        }
+
+        /* 统计数据区域 */
+        .stats {
+            padding: 80px 0;
+            background: var(--ink);
+            color: var(--on-primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 24px;
+        }
+
+        .stat-number {
+            font-size: 56px;
+            font-weight: 600;
+            letter-spacing: -2.4px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #50e3c2, #0070f3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* 进度条演示 */
+        .progress-section {
+            padding: 80px 0;
+        }
+
+        .progress-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .progress-item {
+            margin-bottom: 32px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .progress-label {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--ink);
+        }
+
+        .progress-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--link);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--hairline);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #50e3c2, #0070f3);
+            border-radius: 4px;
+            width: 0%;
+        }
+
+        /* 文字动画演示 */
+        .text-demo {
+            padding: 80px 0;
+            background: var(--canvas-soft);
+            text-align: center;
+        }
+
+        .typewriter {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--ink);
+            min-height: 48px;
+            margin-bottom: 24px;
+        }
+
+        .char {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* 场景切换演示 */
+        .scene-demo {
+            padding: 80px 0;
+        }
+
+        .scene-container {
+            position: relative;
+            height: 400px;
+            background: var(--canvas-soft);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--hairline);
+        }
+
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .scene.active {
+            opacity: 1;
+        }
+
+        .scene-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--ink);
+        }
+
+        .scene-desc {
+            font-size: 18px;
+            color: var(--body);
+            max-width: 500px;
+        }
+
+        .scene-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .scene-btn {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: var(--on-primary);
+            border: none;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scene-btn:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+
+        /* 光晕效果演示 */
+        .glow-demo {
+            padding: 80px 0;
+            background: var(--ink);
+            text-align: center;
+        }
+
+        .glow-card {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 48px;
+            margin: 24px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .glow-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0 40px rgba(80, 227, 194, 0.3);
+        }
+
+        .glow-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--on-primary);
+            margin-bottom: 16px;
+        }
+
+        .glow-desc {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 300px;
+        }
+
+        /* 页脚 */
+        .footer {
+            padding: 60px 0 40px;
+            background: var(--canvas-soft);
+            border-top: 1px solid var(--hairline);
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--ink);
+            margin-bottom: 16px;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 8px;
+        }
+
+        .footer-links a {
+            color: var(--body);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--ink);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid var(--hairline);
+            font-size: 14px;
+            color: var(--body);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 40px;
+                letter-spacing: -1.6px;
+            }
+            
+            .section-title {
+                font-size: 32px;
+                letter-spacing: -1.2px;
+            }
+            
+            .cta-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部导航 -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">Mode2 Animation</div>
+            <nav class="nav-links">
+                <a href="#features">特性</a>
+                <a href="#stats">数据</a>
+                <a href="#demo">演示</a>
+                <a href="#contact">联系</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 英雄区域 -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-badge animatable" data-delay="0.2">
+                ✨ 专业动效设计库
+            </div>
+            <h1 class="hero-title animatable" data-delay="0.4">
+                让动画讲述故事
+            </h1>
+            <p class="hero-subtitle animatable" data-delay="0.6">
+                基于Stripe、Linear、Vercel、Raycast等顶级网站的设计原则，
+                打造成熟、有目的的动画效果。
+            </p>
+            <div class="cta-group animatable" data-delay="0.8">
+                <a href="#demo" class="btn btn-primary">查看演示</a>
+                <a href="#features" class="btn btn-secondary">了解更多</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 特性区域 -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title animatable" data-delay="0.2">专业动效设计</h2>
+            <p class="section-subtitle animatable" data-delay="0.4">
+                每一个动画都有其存在的意义，引导用户视线，提升交互体验
+            </p>
+            <div class="features-grid">
+                <div class="feature-card animatable" data-delay="0.6">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">目的性动画</h3>
+                    <p class="feature-desc">
+                        每个动画都服务于特定目的：引导注意力、提供反馈、展示状态变化。
+                    </p>
+                </div>
+                <div class="feature-card animatable" data-delay="0.8">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">物理缓动</h3>
+                    <p class="feature-desc">
+                        使用弹簧、弹性等物理缓动函数，让动画感觉自然、有生命力。
+                    </p>
+                </div>
+                <div class="feature-card animatable" data-delay="1.0">
+                    <div class="feature-icon">🎨</div>
+                    <h3 class="feature-title">多层组合</h3>
+                    <p class="feature-desc">
+                        位移、缩放、模糊、透明度组合使用，创造丰富的视觉层次。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 统计数据区域 -->
+    <section class="stats" id="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item animatable" data-delay="0.2">
+                    <div class="stat-number" data-count="98">0</div>
+                    <div class="stat-label">动画流畅度</div>
+                </div>
+                <div class="stat-item animatable" data-delay="0.4">
+                    <div class="stat-number" data-count="50">0</div>
+                    <div class="stat-label">动画组件</div>
+                </div>
+                <div class="stat-item animatable" data-delay="0.6">
+                    <div class="stat-number" data-count="12">0</div>
+                    <div class="stat-label">缓动函数</div>
+                </div>
+                <div class="stat-item animatable" data-delay="0.8">
+                    <div class="stat-number" data-count="100">0</div>
+                    <div class="stat-label">性能优化</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 进度条演示 -->
+    <section class="progress-section" id="progress">
+        <div class="container">
+            <h2 class="section-title animatable" data-delay="0.2">进度动画</h2>
+            <p class="section-subtitle animatable" data-delay="0.4">
+                平滑的进度条动画，展示数据增长过程
+            </p>
+            <div class="progress-container">
+                <div class="progress-item animatable" data-delay="0.6">
+                    <div class="progress-header">
+                        <span class="progress-label">动画性能</span>
+                        <span class="progress-value">95%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" data-width="95"></div>
+                    </div>
+                </div>
+                <div class="progress-item animatable" data-delay="0.8">
+                    <div class="progress-header">
+                        <span class="progress-label">用户体验</span>
+                        <span class="progress-value">88%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" data-width="88"></div>
+                    </div>
+                </div>
+                <div class="progress-item animatable" data-delay="1.0">
+                    <div class="progress-header">
+                        <span class="progress-label">代码质量</span>
+                        <span class="progress-value">92%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" data-width="92"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 文字动画演示 -->
+    <section class="text-demo" id="text">
+        <div class="container">
+            <h2 class="section-title animatable" data-delay="0.2">文字动画</h2>
+            <p class="section-subtitle animatable" data-delay="0.4">
+                逐字出现的文字动画，创造优雅的阅读体验
+            </p>
+            <div class="typewriter animatable" data-delay="0.6">
+                <span class="char">专</span>
+                <span class="char">业</span>
+                <span class="char">动</span>
+                <span class="char">效</span>
+                <span class="char">设</span>
+                <span class="char">计</span>
+                <span class="char">，</span>
+                <span class="char">让</span>
+                <span class="char">每</span>
+                <span class="char">一</span>
+                <span class="char">帧</span>
+                <span class="char">都</span>
+                <span class="char">讲</span>
+                <span class="char">述</span>
+                <span class="char">故</span>
+                <span class="char">事</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 场景切换演示 -->
+    <section class="scene-demo" id="demo">
+        <div class="container">
+            <h2 class="section-title animatable" data-delay="0.2">场景切换</h2>
+            <p class="section-subtitle animatable" data-delay="0.4">
+                平滑的场景过渡动画，支持瞬间切换（兼容截帧）
+            </p>
+            <div class="scene-container animatable" data-delay="0.6">
+                <div class="scene active" id="scene1">
+                    <h3 class="scene-title">场景一：欢迎</h3>
+                    <p class="scene-desc">
+                        这是第一个场景，展示了平滑的淡入动画效果。
+                        每个元素都有独立的入场时机。
+                    </p>
+                </div>
+                <div class="scene" id="scene2">
+                    <h3 class="scene-title">场景二：特性</h3>
+                    <p class="scene-desc">
+                        第二个场景展示了多层组合动画：位移、缩放、模糊同时作用，
+                        创造丰富的视觉层次。
+                    </p>
+                </div>
+                <div class="scene" id="scene3">
+                    <h3 class="scene-title">场景三：数据</h3>
+                    <p class="scene-desc">
+                        第三个场景展示了数字滚动动画，数据从0增长到目标值，
+                        过程平滑自然。
+                    </p>
+                </div>
+            </div>
+            <div class="scene-controls animatable" data-delay="0.8">
+                <button class="scene-btn" onclick="switchScene(1)">场景一</button>
+                <button class="scene-btn" onclick="switchScene(2)">场景二</button>
+                <button class="scene-btn" onclick="switchScene(3)">场景三</button>
+                <button class="scene-btn" onclick="switchScene(1, true)">瞬间切换</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 光晕效果演示 -->
+    <section class="glow-demo" id="glow">
+        <div class="container">
+            <h2 class="section-title animatable" data-delay="0.2" style="color: var(--on-primary);">光晕效果</h2>
+            <p class="section-subtitle animatable" data-delay="0.4" style="color: rgba(255,255,255,0.7);">
+                微妙的光晕动画，增强视觉焦点
+            </p>
+            <div class="glow-card animatable" data-delay="0.6">
+                <h3 class="glow-title">悬停效果</h3>
+                <p class="glow-desc">
+                    鼠标悬停时，卡片会产生微妙的光晕效果，
+                    引导用户注意力。
+                </p>
+            </div>
+            <div class="glow-card animatable" data-delay="0.8">
+                <h3 class="glow-title">脉冲动画</h3>
+                <p class="glow-desc">
+                    持续的光晕脉冲动画，创造生动的视觉效果。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>产品</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">动画库</a></li>
+                        <li><a href="#">组件库</a></li>
+                        <li><a href="#">设计系统</a></li>
+                        <li><a href="#">文档</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>资源</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">教程</a></li>
+                        <li><a href="#">示例</a></li>
+                        <li><a href="#">博客</a></li>
+                        <li><a href="#">社区</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>公司</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">关于</a></li>
+                        <li><a href="#">招聘</a></li>
+                        <li><a href="#">联系</a></li>
+                        <li><a href="#">新闻</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>支持</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">帮助中心</a></li>
+                        <li><a href="#">API状态</a></li>
+                        <li><a href="#">隐私政策</a></li>
+                        <li><a href="#">服务条款</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Mode2 Animation. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../scripts/animation-library.js"></script>
+    <script>
+        // 初始化GSAP
+        gsap.registerPlugin(ScrollTrigger);
+        
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化所有可动画元素
+            initAnimations();
+            
+            // 初始化数字滚动动画
+            initCounters();
+            
+            // 初始化进度条动画
+            initProgressBars();
+            
+            // 初始化文字动画
+            initTextAnimation();
+            
+            // 初始化场景切换
+            initScenes();
+        });
+        
+        // 初始化动画
+        function initAnimations() {
+            // 使用Intersection Observer检测元素进入视口
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const el = entry.target;
+                        const delay = parseFloat(el.dataset.delay) || 0;
+                        
+                        // 使用GSAP动画库
+                        Mode2Animation.containerEntrance(el, {
+                            delay: delay,
+                            duration: 0.8,
+                            ease: "back.out(1.7)"
+                        });
+                        
+                        // 停止观察
+                        observer.unobserve(el);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            // 观察所有可动画元素
+            document.querySelectorAll('.animatable').forEach(el => {
+                observer.observe(el);
+            });
+        }
+        
+        // 初始化数字滚动动画
+        function initCounters() {
+            const counters = document.querySelectorAll('.stat-number');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const el = entry.target;
+                        const target = parseInt(el.dataset.count);
+                        
+                        Mode2Animation.numberCounter(el, target, 1.5);
+                        
+                        observer.unobserve(el);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            counters.forEach(counter => observer.observe(counter));
+        }
+        
+        // 初始化进度条动画
+        function initProgressBars() {
+            const progressBars = document.querySelectorAll('.progress-fill');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const bar = entry.target;
+                        const width = bar.dataset.width;
+                        
+                        Mode2Animation.progressBar(bar, width, 1.2);
+                        
+                        observer.unobserve(bar);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            progressBars.forEach(bar => observer.observe(bar));
+        }
+        
+        // 初始化文字动画
+        function initTextAnimation() {
+            const chars = document.querySelectorAll('.char');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const container = entry.target;
+                        const chars = container.querySelectorAll('.char');
+                        
+                        // 逐字出现动画
+                        gsap.fromTo(chars, 
+                            { 
+                                opacity: 0, 
+                                y: 20,
+                                rotationX: -90
+                            },
+                            {
+                                opacity: 1,
+                                y: 0,
+                                rotationX: 0,
+                                duration: 0.6,
+                                stagger: 0.05,
+                                ease: "back.out(1.7)"
+                            }
+                        );
+                        
+                        observer.unobserve(container);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            const typewriter = document.querySelector('.typewriter');
+            if (typewriter) {
+                observer.observe(typewriter);
+            }
+        }
+        
+        // 场景切换功能
+        let currentScene = 1;
+        
+        function initScenes() {
+            // 显示第一个场景
+            switchScene(1, true);
+        }
+        
+        function switchScene(sceneIndex, instant = false) {
+            currentScene = sceneIndex;
+            
+            // 隐藏所有场景
+            document.querySelectorAll('.scene').forEach(scene => {
+                scene.classList.remove('active');
+            });
+            
+            // 显示目标场景
+            const targetScene = document.getElementById(`scene${sceneIndex}`);
+            if (targetScene) {
+                targetScene.classList.add('active');
+                
+                if (!instant) {
+                    // 使用动画库的场景切换
+                    Mode2Animation.showScene(sceneIndex - 1, false);
+                } else {
+                    // 瞬间切换（兼容截帧）
+                    Mode2Animation.showScene(sceneIndex - 1, true);
+                }
+            }
+        }
+        
+        // 添加鼠标跟随光晕效果
+        document.addEventListener('mousemove', (e) => {
+            const cards = document.querySelectorAll('.glow-card');
+            
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+        
+        // 添加CSS变量支持鼠标位置
+        const style = document.createElement('style');
+        style.textContent = `
+            .glow-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border-radius: inherit;
+                background: radial-gradient(
+                    300px circle at var(--mouse-x) var(--mouse-y),
+                    rgba(80, 227, 194, 0.1),
+                    transparent 60%
+                );
+                opacity: 0;
+                transition: opacity 0.3s;
+                pointer-events: none;
+            }
+            
+            .glow-card:hover::before {
+                opacity: 1;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

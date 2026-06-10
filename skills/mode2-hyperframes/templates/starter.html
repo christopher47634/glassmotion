@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    #stage {
+      width: 1920px;
+      height: 1080px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: 'LXGW WenKai', 'Chakra Petch', sans-serif;
+    }
+    
+    /* 粒子背景 */
+    .particles {
+      position: absolute;
+      width: 100%; height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(0,240,255,0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(0,240,255,0.2), transparent),
+        radial-gradient(2px 2px at 50px 160px, rgba(0,240,255,0.4), transparent);
+      background-size: 200px 200px;
+      animation: float 20s linear infinite;
+      opacity: 0.5;
+    }
+    @keyframes float { from { transform: translateY(0); } to { transform: translateY(-200px); } }
+    
+    /* 主标题 */
+    .title {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 72px; font-weight: 700;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(0,240,255,0.5);
+      text-align: center;
+      opacity: 0;
+      animation: fadeInUp 1s ease-out 0.5s forwards;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translate(-50%, -40%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+    
+    /* 副标题 */
+    .subtitle {
+      position: absolute;
+      top: 65%; left: 50%;
+      transform: translateX(-50%);
+      font-size: 36px; color: #00F0FF;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 1s ease-out 1.5s forwards;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    /* 角落装饰 */
+    .corner {
+      position: absolute; width: 80px; height: 80px;
+      border-color: #00F0FF; border-style: solid; border-width: 0; opacity: 0.5;
+    }
+    .corner.tl { top: 20px; left: 20px; border-top-width: 2px; border-left-width: 2px; }
+    .corner.tr { top: 20px; right: 20px; border-top-width: 2px; border-right-width: 2px; }
+    .corner.bl { bottom: 20px; left: 20px; border-bottom-width: 2px; border-left-width: 2px; }
+    .corner.br { bottom: 20px; right: 20px; border-bottom-width: 2px; border-right-width: 2px; }
+    
+    /* 装饰线 */
+    .deco-line {
+      position: absolute;
+      background: linear-gradient(90deg, transparent, #00F0FF, transparent);
+      height: 2px; left: 10%; width: 0; opacity: 0.6;
+      animation: expandWidth 1s ease-out 2s forwards;
+    }
+    .deco-line.top { top: 15%; }
+    .deco-line.bottom { bottom: 15%; }
+    @keyframes expandWidth { from { width: 0; } to { width: 80%; } }
+  </style>
+</head>
+<body>
+  <!-- 舞台：data 属性定义视频元数据 -->
+  <div id="stage" 
+       data-composition-id="main" 
+       data-start="0" 
+       data-duration="10" 
+       data-width="1920" 
+       data-height="1080" 
+       data-fps="30">
+    
+    <div class="particles"></div>
+    
+    <div class="title">示例标题</div>
+    <div class="subtitle">副标题文字</div>
+    
+    <div class="deco-line top"></div>
+    <div class="deco-line bottom"></div>
+    
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    
+    <!-- BGM -->
+    <!-- <audio src="/music/track.mp3" data-start="0" data-volume="0.08" loop></audio> -->
+  </div>
+</body>
+</html>
