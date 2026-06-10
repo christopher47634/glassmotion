@@ -8,7 +8,7 @@
 
 [English](#english) · [中文](#中文介绍)
 
-<img src="examples/frame-title.png" width="200" alt="标题场景"/> <img src="examples/frame-features.png" width="200" alt="功能展示"/> <img src="examples/frame-price.png" width="200" alt="数据对比"/> <img src="examples/frame-ending.png" width="200" alt="结尾场景"/>
+<img src="examples/frame-01.png" width="200" alt="标题场景"/> <img src="examples/frame-02.png" width="200" alt="功能展示"/> <img src="examples/frame-03.png" width="200" alt="数据对比"/> <img src="examples/frame-05.png" width="200" alt="结尾场景"/>
 
 ---
 
@@ -114,10 +114,10 @@ GlassMotion 是一个 **AI 驱动的视频生产引擎**，让你只需要描述
 > - 1.2x 智能加速
 
 <div align="center">
-<img src="examples/frame-title.png" width="180" alt="场景1：标题卡"/>
-<img src="examples/frame-features.png" width="180" alt="场景2：功能展示"/>
-<img src="examples/frame-price.png" width="180" alt="场景3：价格对比"/>
-<img src="examples/frame-ending.png" width="180" alt="场景4：结尾引导"/>
+<img src="examples/frame-01.png" width="180" alt="场景1：标题卡"/>
+<img src="examples/frame-02.png" width="180" alt="场景2：功能展示"/>
+<img src="examples/frame-03.png" width="180" alt="场景3：价格对比"/>
+<img src="examples/frame-05.png" width="180" alt="场景4：结尾引导"/>
 </div>
 
 ---
@@ -290,7 +290,7 @@ glassmotion/
 
 | 标题卡 | 功能展示 | 价格对比 | 虚拟录屏 | 结尾 |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="examples/frame-title.png" width="140"/> | <img src="examples/frame-features.png" width="140"/> | <img src="examples/frame-price.png" width="140"/> | <img src="examples/frame-ending.png" width="140"/> | <img src="examples/frame-ending.png" width="140"/> |
+| <img src="examples/frame-01.png" width="140"/> | <img src="examples/frame-02.png" width="140"/> | <img src="examples/frame-03.png" width="140"/> | <img src="examples/frame-05.png" width="140"/> | <img src="examples/frame-05.png" width="140"/> |
 
 </div>
 
