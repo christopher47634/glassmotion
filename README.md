@@ -266,6 +266,22 @@ glassmotion/
     └── dark-tech/         # 深色科技风模板
 ```
 
+## 🧪 渲染前 lint 与 PSNR 回归
+
+零依赖，仅需 Node 18+（PSNR 需要 ffmpeg，可用环境变量 `FFMPEG` 指定路径）。
+
+```bash
+# 1. 渲染前：检查 HTML 是否可确定性逐帧截图
+node scripts/lint-html.mjs path/to/scenes.html      # 或传目录；--strict 把外链资源也当错误
+#   错误：Math.random()、Date.now()/new Date()/performance.now()、animation 简写缺时长、animation-duration:auto
+#   警告：setTimeout/setInterval/requestAnimationFrame、无限循环动画、autoplay 媒体、外链资源（CDN）
+
+# 2. 渲染后：与基准比对（视频或截图均可），平均 PSNR 低于阈值（默认 25 dB）则退出码 1
+node scripts/psnr-compare.mjs baseline.mp4 new.mp4 --threshold 25
+```
+
+建议流程：把满意的成片/关键帧存为基准，改动模板或渲染参数后重渲染并跑 PSNR；两者分辨率、帧数需一致。`npm test` 运行单测（含真实 ffmpeg 用例，无 ffmpeg 时自动跳过），CI 会自检仓库内模板。
+
 ## 🎯 Key Features
 
 ### 🪟 Glassmorphism by Default

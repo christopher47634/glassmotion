@@ -1,0 +1,12 @@
+{
+  "name": "glassmotion-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GlassMotion 渲染前 HTML 确定性 lint 与 PSNR 回归比对脚本（零依赖）",
+  "scripts": {
+    "lint:html": "node scripts/lint-html.mjs skills",
+    "psnr": "node scripts/psnr-compare.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
