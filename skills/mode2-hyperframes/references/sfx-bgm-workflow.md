@@ -266,6 +266,18 @@ capture-v5.py 的 `let sceneId = time < X ? 's0' : ...` 决定了场景切换时
 User 定稿偏好：volume=0.08（8%），必须用真实素材（合成 BGM 在 8% 下无质感）。
 BGM 目标 max：-12 ~ -18 dB（voiceover 约 -2 dB）。
 
+**按 track 响度校准 volume**（先 `ffmpeg -i bgm.mp3 -af volumedetect -f null -` 量 mean_volume）：
+
+| BGM mean_volume | 推荐 volume |
+|-----------------|-------------|
+| -29 ~ -31 dB | 0.08 |
+| -31 ~ -33 dB | 0.12 |
+| -34 ~ -36 dB | 0.15 |
+| -37 ~ -39 dB | 0.20 |
+
+目标：混音后 mean_volume 在 -22 ~ -18 dB。四首实测 track 按上表设置后，混音 mean 都落在 -19.4 ~ -19.8 dB、max -1.7 ~ -2.8 dB。
+人声保持 volume=1.0；曾用 volume=-0.2 导致混音 mean 掉到 -41 dB。
+
 ### 批量课程 BGM 轮换
 
 多课并行生产时，每课用不同 BGM 避免听觉疲劳：

@@ -7,16 +7,10 @@ triggers:
   - "hyperframes"
   - "mode2"
   - "文字动画视频"
-  - "短视频生成"
-  - "产品介绍视频"
-  - "数据可视化视频"
-  - "社媒短视频"
   - "HTML视频"
+  - "HTML 逐帧截图视频"
   - "程序化视频"
-  - "模拟录屏"
   - "虚拟录屏"
-  - "组件库"
-  - "动画模拟UI"
 ---
 
 # Mode2: 纯稿子视频生产
@@ -43,7 +37,7 @@ triggers:
 |------|------|
 | 主题 | 科普→米白暖色；硬核/工具→暗色科技。一课一主题不混 |
 | 配色 | 1 主色 + 1 强调色 + 中性灰，强调色只用在最该被看见处 |
-| 字体 | 本地 @font-face `E:\Fonts\`（映射 `~/Fonts/`），字幕用 ZCOOL KuaiLe 圆体，禁 CDN/emoji |
+| 字体 | 字体文件放项目 `fonts/`，@font-face 用相对路径（可从 `$FONTS_DIR` 复制），字幕用 ZCOOL KuaiLe 圆体，禁 CDN/emoji |
 | 字号 | h1 ≥ 72px，字幕 58px（User 48+10=58，嫌小看不清） |
 | 间距 | 8 的倍数节奏，统一圆角、柔和阴影 |
 | 图标 | IconPark / Iconfont / Lucide，禁止 flat+3D+emoji 混搭 |
@@ -65,34 +59,36 @@ triggers:
 
 ## 四、动画架构
 
-### 核心：时间驱动（seekTo 友好）
+### 核心：seekTo(t) 是 t 的纯函数
 
-所有动画用 `elapsed >= data-delay` 驱动，禁 setTimeout。seekTo 截帧时 Playwright 从 0s 重跑。
+截帧脚本对每一帧调用 `window.seekTo(t)` 后立刻截图，不等动画、不保证调用顺序。
+所以画面只能由 t 算出来：禁定时器、requestAnimationFrame、performance.now、播放中的 GSAP tween、CSS transition/infinite 动画、flag 状态。
 
-```js
-let startTime = performance.now();
-function animateElements() {
-  const elapsed = (performance.now() - startTime) / 1000;
-  document.querySelectorAll('.step').forEach(el => {
-    const delay = parseFloat(el.dataset.delay);
-    if (elapsed >= delay && !el.classList.contains('show')) el.classList.add('show');
-  });
-  requestAnimationFrame(animateElements);
-}
-animateElements(); // 必须调用
+```html
+<script src="scripts/seek-animation.js"></script>
+<script>
+  window.seekTo = function (t) {
+    const { index, local } = GMSeek.sceneAt(SCENE_BOUNDS, t);   // SCENE_BOUNDS 来自 VTT
+    GMSeek.showScene(document.querySelectorAll('.scene'), index);
+    GMSeek.timeDriven(document.getElementById('s' + index), local); // 元素用 data-delay / data-animation
+    GMSeek.subtitle(document.getElementById('sub'), SUBTITLES, t);
+  };
+</script>
 ```
+
+完整规范与自检 → `references/seekto-runtime.md`；起手模板 → `templates/starter.html`。
 
 ### 动画加载顺序
 
 1. 基础组件 → `references/animation-components.md`（stagger、渐进高亮、计数器、打字机等）
 2. **动画灵感与提升** → `references/animation-inspiration.md`（参考网站、缓动选择、多层组合、stagger编排、User对动画质量的要求）
-3. **高级动画** → `references/advanced-animation-techniques.md`（GSAP、多层组合、缓动曲线、模糊效果、时间线序列）
-3. **动画库** → `scripts/animation-library.js`（可复用的 GSAP 动画函数：容器入场、交错、数字滚动、光晕脉冲等）
-4. 背景动效 → `references/background-effects-dark.md`（3 层：光球 + 粒子 + 扫描线）
-5. 虚拟录屏 → `references/virtual-recording-engine.md`（终端、代码编辑器、聊天模拟）
+3. **高级动画** → `references/advanced-animation-techniques.md`（缓动曲线、多层组合、模糊、时间线；出片时 GSAP 时间线必须 `paused` 并用 `GMSeek.timeline(tl, t)` 驱动）
+4. **动画库** → `scripts/seek-animation.js`（GMSeek：容器入场、交错、数字滚动、光晕脉冲等，全部是 t 的纯函数，可出片）；`scripts/interactive-animation.js`（GMLive：鼠标/滚动/实时效果，只用于预览页，不能出片）
+5. 背景动效 → `references/background-effects-dark.md`（3 层：光球 + 粒子 + 扫描线）
+6. 虚拟录屏 → `references/virtual-recording-engine.md`（终端、代码编辑器、聊天模拟）
    - macOS+Claude界面模拟 → `macos-claude-ui` skill（红黄绿按钮、Claude.ai配色、打字机动画）
-   6. 科普/技术热点视频默认风格 → `popular-science-video-style` skill（深色科技风、64px字幕、三层背景动效）
-7. **Lottie动画** → `lottie-web-integration` skill（loading/转场/图标动效，本地素材在`~/course-studio/lottie-animations/`）
+7. 科普/技术热点视频默认风格 → `popular-science-video-style` skill（深色科技风、64px字幕、三层背景动效）
+8. **Lottie动画** → `lottie-web-integration` skill（loading/转场/图标动效；出片时用 `goToAndStop(t*1000, false)` 由 seekTo 驱动）
 
 ### Lottie vs GSAP 选择指南
 
@@ -103,36 +99,19 @@ animateElements(); // 必须调用
 | 卡片入场/文字动画 | GSAP | 与seekTo兼容更好 |
 | 物理动画（弹跳/流体）| Lottie | AE制作的效果更自然 |
 
-### 双轨对比流程（强制）
+### 双轨对比流程（新场景）
 
-**每个新场景必须出两套版本**：
-
-1. 工程师写两版HTML：`scene-XX-gsap.html` + `scene-XX-lottie.html`
-2. 各截2帧（间隔1秒）验证动画在动
-3. 弹出4张图到桌面让V选
-4. V选完再渲染，不选不渲染
-
-```bash
-# 弹出对比图
-cp /tmp/gsap-frame*.png ~/Desktop/
-cp /tmp/lottie-frame*.png ~/Desktop/
-cmd.exe /c start "" "C:\Users\<you>\Desktop\gsap-frame1.png"
-cmd.exe /c start "" "C:\Users\<you>\Desktop\lottie-frame1.png"
-```
-
-V偏好：好看 > 稳。Lottie乱码风险通过URL加载模式+容器尺寸检查预防。
+1. 新场景写两版 HTML：`scene-XX-gsap.html` + `scene-XX-lottie.html`
+2. 各用 `scripts/verify-template.py --times` 截 2 帧（间隔 1 秒），确认动画在动
+3. 把 4 张图发给用户选，选定后再整片渲染
 
 ### 常见动画陷阱
 
 - **动画太单调/幼稚/没有动效**（User原话）— 这是最常犯的错。不能只做淡入+位移就完事。必须组合多层动效：位移+缩放+模糊+透明度，配合缓动曲线。参考优秀网站（Stripe/Linear/Vercel的动效）学习高级动画手法。
 - **标题做流光效果，禁止抽搐抖动**（User原话："动画闲的没事干抽搐啥，标题有动效不能做流光的吗非得抽搐和老年痴呆一样"）。标题用 CSS shimmer（gradient sweep），不用 GSAP yoyo bounce。作业墙等强调效果用平滑 scale pulse，不用 rapid x/rotation tween。
-- **动画质量检查清单**：所有 GSAP easing 必须是 `power2.out`/`power3.out`/`sine.inOut`/`back.out(1.7)`，禁止 abrupt direction changes 或 rapid oscillation（看起来像抽搐）。入场动画 0.4-0.7s，环境微动用 sine.inOut loop。
-- seekTo + GSAP 冲突 → `references/gsap-capture-pitfall.md`
-- GSAP + Puppeteer 截帧踩坑（WSL TMPDIR、paused timeline 空白、字体路径）→ `references/gsap-puppeteer-screenshot-pitfalls.md`
-- seekTo 闪烁 → `references/seekto-flash-fix.md`（isSeeking 模式）
-- seekTo 即时切换 → `references/seekto-instant-switch.md`
-- Phase-based 动画架构 → `references/phase-based-animation.md`
-- 时间驱动动画详解 → `references/time-driven-animation.md`、`references/seekTo-time-driven-animation.md`
+- **动画质量检查清单**：缓动只用 power2Out / power3Out / sineInOut / backOut（GMSeek.ease 里都有），禁止急转向或快速振荡（看起来像抽搐）。入场动画 0.4-0.7s，环境微动用 `GMSeek.breathe` / `glowPulse`（sin(t)，不用无限循环 tween）。
+- 截帧空白、闪烁、半透明帧 → 都是 seekTo 有状态或有过渡，见 `references/seekto-runtime.md`
+- 时间驱动元素的 data-delay 编排示例 → `references/time-driven-animation.md`
 
 ---
 
@@ -159,47 +138,40 @@ V偏好：好看 > 稳。Lottie乱码风险通过URL加载模式+容器尺寸检
 
 ## 七、生产流程（6 步）
 
-### 0. 启动
+### 0. 预览（可选）
 
 ```bash
-cd /path/to/project && python -m http.server 8080
+cd /path/to/project && python3 -m http.server 8080   # 浏览器里调 seekTo(t) 检查画面；截帧脚本直接读本地文件，不需要服务
 ```
 
-### 0.5 TTS 配音（建议先做，音频时长决定视频时长）
+### 1. TTS 配音（先做，音频时长决定视频时长）
 
-- **MiniMax T2A**（your_voice_id）最自然，API直接生成分段MP3 + 时长毫秒数
-- edge-tts 备选：zh-CN-YunxiNeural +5% 语速
-- 每段台词单独 MP3 + 0.3-0.5s 静音间隔
-- FFmpeg concat 合并，ffprobe 量实际时长生成 VTT
-- 详见 `references/wsl-rendering-pitfalls.md` 的 "TTS 语音选择"
+- 默认 edge-tts `zh-CN-YunxiNeural` +5% 语速（免费）；要更自然可用 MiniMax T2A（需自备 API key 和 voice_id，见 `references/minimax-tts-api.md`）
+- 稿子写进文件，用 `edge-tts --file script.txt`，不要 `--text "$(cat …)"`
+- 每段台词单独 MP3 + 0.3-0.5s 静音间隔，FFmpeg concat 合并，ffprobe 量实际时长生成 VTT
+- VTT 是字幕和场景边界的唯一时间来源，禁止 AI 估算
+- 详见 `references/wsl-rendering-pitfalls.md` 的「TTS 语音选择」
 
-### 1. 设计 → 写 HTML
+### 2. 设计 → 写 HTML
 
 - 按分镜表逐场景写 HTML，每场景独立文件
 - 组件参考 → `references/html-components-library.md`
 - 布局：padding 80px(上) + 180px(下，字幕留空)，左右 120px
 
-### 2. TTS 配音
-
-- edge-tts 生成 MP3 + VTT
-- VTT 是字幕时间线的唯一数据源，禁止 AI 估算
-
 ### 3. 截帧
 
-- Playwright + seekTo 逐帧截图，帧率 15fps
-- viewport 必须和 HTML body 尺寸一致（竖屏 1080×1920）
-- TMPDIR=/tmp（WSL 路径兼容）
-- ### 截帧验证流程
+```bash
+python3 scripts/capture-template.py scenes.html --vtt voiceover.vtt --fps 15 --out frames
+```
 
-截帧后用 vision_analyze 检查中间帧。
-
-⚠️ **WSL 上 Playwright 不可用**（Ubuntu 26.04+ 无 chromium 支持）。用 puppeteer-core + snap chromium。详见 `references/wsl-rendering-pitfalls.md`。
+- 后端统一 Playwright；浏览器：`--chromium` / `CHROMIUM_PATH` / Playwright 自带 Chromium
+- viewport 必须和 HTML body 尺寸一致（竖屏 1080×1920，`--width/--height`）
+- 任何一帧失败都会以退出码 1 结束并列出失败帧，不会留下断档的帧序列
+- 截帧后抽查中间帧：`python3 scripts/verify-template.py scenes.html --times 2 8 15`
+- 编码：`bash scripts/nvenc-template.sh frames mixed.m4a out.mp4`（无 NVIDIA GPU 时 `ENCODER=libx264`）
 
 截帧踩坑 → `references/capture-and-subtitle-pitfalls.md`
-Playwright WSL 问题 → `references/playwright-wsl-pitfalls.md`
-WSL渲染+合成全流程踩坑 → `references/wsl-rendering-pitfalls.md`（Puppeteer配置、virtual-time-budget失效、FFmpeg中文路径、帧编号、TTS分段）
-| WSL截帧替代方案 | `references/capture-alternatives-wsl.md` |
-WSL截帧替代方案(Puppeteer-core / virtual-time-budget陷阱) → `references/capture-alternatives-wsl.md`
+WSL 环境（TMPDIR、系统 Chromium、FFmpeg 中文路径、字体方块）→ `references/wsl-rendering-pitfalls.md`、`references/playwright-wsl-pitfalls.md`
 
 ### 4. 混音
 
@@ -214,8 +186,8 @@ WSL截帧替代方案(Puppeteer-core / virtual-time-budget陷阱) → `reference
 - 字幕时间线**必须从 VTT 提取**
 - 字幕文本直接用口播稿分段，禁止改写
 - **每条字幕 ≤ 20 个中文字**（User 要求碎切，不要又粗又长）
-- **推荐 ASS 格式**：支持半透明背景框、精确字体控制（ZCOOL KuaiLe圆体, 58px, Bold=0, 底部居中）
-- **禁止加 Shadow 或背景框**（2026-06-11 实测踩坑）：Shadow=2 会在字幕后生成黑色矩形，非常丑。User 明确要求白字直接叠在画面上，只用 Outline 描边（Outline=3, Shadow=0）。如果要加背景框，必须先问 V
+- **推荐 ASS 格式**：精确控制字体与描边（ZCOOL KuaiLe 圆体, 58px, Bold=0, 底部居中）
+- **默认不加 Shadow 和背景框**：Shadow=2 会在字幕后生成黑色矩形。白字直接叠在画面上，只用描边（Outline=3, Shadow=0）；要加背景框先和用户确认
 - FFmpeg 中文路径问题：先 `cp` ASS/VTT 到 `/tmp` 再引用
 - **改字幕 = 同步改 subtitles + sceneBounds + totalDuration 三处**
 - 字幕用 VTT 原始时间戳，禁止加 INTRO_DUR 偏移
@@ -231,11 +203,10 @@ WSL截帧替代方案(Puppeteer-core / virtual-time-budget陷阱) → `reference
   - `fontsdir=/usr/share/fonts` 找不到用户安装的字体
   - ZCOOL KuaiLe 通常在 `~/.fonts/`，用 `fc-list | grep -i zcool` 确认
   - 正确：`fontsdir=/home/user/.fonts`
-- **禁止按字数比例分配时间**（2026-06-10 实测踩坑）：中文语速非匀速，"Anthropic"比"昨天"慢。必须用 Whisper 词级时间戳做对齐。详见 course-video-production skill
+- **禁止按字数比例分配时间**（2026-06-10 实测踩坑）：中文语速非匀速，"Anthropic"比"昨天"慢。必须用 Whisper 词级时间戳做对齐。详见 `references/whisper-subtitle-alignment.md`
 
 字幕集成 → `references/subtitle-integration.md`（含 ASS 生成代码、碎切脚本、User 风格偏好表）
 Whisper词级对齐 → `references/whisper-subtitle-alignment.md`（faster-whisper + 原文映射，解决按字数均分错位问题）
-字幕同步陷阱 → `references/subtitle-sync-pitfalls.md`
 字幕/音频不匹配诊断 → `references/subtitle-audio-mismatch-diagnosis.md`
 VTT 验证 → `references/vtt-verification-with-whisper.md`
 
@@ -255,32 +226,18 @@ VTT 验证 → `references/vtt-verification-with-whisper.md`
 
 ---
 
-## 八、批量流程（已废弃，保留技术参考）
-
-以下文件描述的"模板+替换元数据"批量流程已禁止，保留仅作技术参考（BGM 校准、NVENC 参数等仍有效）：
-
-- `references/batch-course-pipeline.md` — L04-L10 批量管线
-- `references/batch-lesson-automation.md` — 批量自动化管线
-- `references/batch-pipeline-pitfalls.md` — 输出缓冲陷阱
-- `references/batch-production-pipeline.md` — 批量流水线
-- `references/multi-lesson-production.md` — 多课流程
-
-当前有效工序 → `references/per-scene-workflow.md`（逐场景从零设计）
-
----
-
-## 九、其他技术参考
+## 八、其他技术参考
 
 | 主题 | 文件 |
 |------|------|
 | 高级动画技巧（GSAP/缓动/模糊/时间线） | `references/advanced-animation-techniques.md` |
-| 动画库（可复用函数） | `scripts/animation-library.js` |
+| 动画库 | `scripts/seek-animation.js`（出片）、`scripts/interactive-animation.js`（仅预览） |
 | 字体渲染踩坑 | `references/font-rendering-pitfalls.md` |
-| Puppeteer WSL 字体渲染 | `references/puppeteer-font-rendering-pitfalls.md` |
 | 动画-语音同步 | `references/animation-timeline-sync.md` |
 | MiniMax TTS API | `references/minimax-tts-api.md` |
 | FFmpeg 表达式踩坑 | `references/ffmpeg-expression-pitfalls.md` |
 | Fallback 方案 | `references/fallback-pipeline.md`（FFmpeg drawtext，最低优先级） |
+| 逐场景工序 | `references/per-scene-workflow.md` |
 | 玻璃态质感 | `references/glass-morphism-quality-upgrade.md` |
 | **热点AI科普速查** | **`references/trending-ai-news-explainer.md`**（调研→分镜→生产5步流水线） |
 | Sub-agent 验证 | `references/sub-agent-verification.md`（防假报告） |

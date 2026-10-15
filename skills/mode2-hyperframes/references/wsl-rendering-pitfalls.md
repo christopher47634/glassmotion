@@ -1,38 +1,25 @@
 # WSL 渲染与合成踩坑
 
-## Puppeteer 在 WSL 上的正确用法
+## 截帧后端：只用 Playwright
 
-**问题**: Playwright 不支持 Ubuntu 26.04+ (`playwright install chromium` 报错)。
-**解决**: 用 puppeteer-core + snap chromium。
+仓库的 `scripts/capture-template.py` / `verify-template.py` 统一用 Playwright（Python）。
+浏览器优先级：`--chromium` 参数 > 环境变量 `CHROMIUM_PATH` > Playwright 自带 Chromium。
 
 ```bash
-cd /tmp && TMPDIR=/tmp npm install puppeteer-core
+python3 -m venv ~/.glassmotion/venv            # 或 ./install.sh --with-deps
+~/.glassmotion/venv/bin/pip install playwright
+~/.glassmotion/venv/bin/python -m playwright install chromium
+# 发行版不被 Playwright 支持时，改用系统 Chromium：
+CHROMIUM_PATH=/usr/bin/chromium python3 scripts/capture-template.py scenes.html --vtt vo.vtt --out frames
 ```
 
-```js
-const puppeteer = require('puppeteer-core');
-const browser = await puppeteer.launch({
-    executablePath: '/snap/bin/chromium',
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    defaultViewport: { width: 1920, height: 1080 }
-});
-```
+WSL 下 Chromium 若报 `mkdtemp` / ENOENT，设 `TMPDIR=/tmp` 再运行，且不要在 `/mnt/c/` 下运行脚本。
 
-**关键**: Node 脚本必须从 `/tmp` 运行，不能从 `/mnt/c/` 下运行。Puppeteer 会在 cwd 附近找 temp 目录，`/mnt/c/` 映射到 Windows 路径导致 `mkdtemp` ENOENT 错误。
+## 不要用 --virtual-time-budget 或「等动画播完」截图
 
-## --virtual-time-budget 不驱动 GSAP
-
-**问题**: `chromium --headless --virtual-time-budget=N` 不会推进 requestAnimationFrame 回调。GSAP 动画完全不播放，截图永远是初始帧。
-
-**解决**: 必须用 Puppeteer 真实等待：
-```js
-await page.goto('file://' + htmlPath, { waitUntil: 'networkidle0' });
-await new Promise(r => setTimeout(r, 1500)); // 等 GSAP 初始化
-await page.evaluate(t => window.seekTo(t), seekToValue);
-await new Promise(r => setTimeout(r, 400)); // 等动画播放
-await page.screenshot({ path: outputPath });
-```
+`chromium --headless --virtual-time-budget=N` 不推进 requestAnimationFrame，GSAP 播放中的 tween 不会动；
+「seekTo 后 sleep 400ms 再截图」结果取决于机器快慢。正确做法是让 `seekTo(t)` 成为纯函数，
+截图前不等待（`--settle-ms 0`），见 `seekto-runtime.md`。
 
 ## FFmpeg subtitles 路径含中文字符
 
@@ -132,31 +119,27 @@ for s in scenes:
         print(f"WARNING: {s['file']} capture_dur={s['capture_dur']} != vtt_dur={s['vtt_dur']}")
 ```
 
-## ⚠️ Puppeteer 截帧中文字体渲染失败
+## ⚠️ 逐帧截图中文字体变方块
 
-**真实事故**：HTML页面在浏览器里中文显示正常，但Puppeteer逐帧截取时中文全部变成方块□□。
+**根因**：`@font-face` 写成 `url('~/Fonts/xxx.ttc')`。浏览器不展开 `~`，通过 HTTP 加载时会请求
+`http://127.0.0.1:PORT~/Fonts/...`，字体加载失败，单张截图可能因系统 fallback 看不出来。
 
-**根因**：HTML的CSS `@font-face` 引用 `url('~/Fonts/NotoSansCJK-Regular.ttc')`。当页面通过HTTP server加载时，浏览器请求 `http://127.0.0.1:PORT~/Fonts/NotoSansCJK-Regular.ttc`，HTTP server映射到 `SCENES_DIR + ~/Fonts/...`，路径不存在，字体加载失败。
+**修复**：字体放进项目目录，用相对路径引用，并在截图前等字体就绪（capture_common.open_page 已经 `await document.fonts.ready`）：
 
-**注意**：单张截图（`page.screenshot`）时字体可能因为系统fontconfig fallback而正常显示，但逐帧渲染时每帧都重新解析CSS，字体加载失败会更明显。
-
-**修复方法**：在scenes目录下创建字体文件的符号链接：
-```bash
-mkdir -p "/path/to/scenes~/Fonts/"
-ln -sf /tmp/NotoSansCJK-Regular.ttc "/path/to/scenes~/Fonts/NotoSansCJK-Regular.ttc"
-ln -sf /tmp/NotoSansCJK-Bold.ttc "/path/to/scenes~/Fonts/NotoSansCJK-Bold.ttc"
+```css
+@font-face { font-family: "ZCOOL KuaiLe"; src: url("fonts/ZCOOLKuaiLe-Regular.ttf"); }
 ```
 
-这样HTTP server收到 `~/Fonts/NotoSansCJK-Regular.ttc` 请求时，能通过符号链接找到实际文件。
+字体目录可用环境变量 `FONTS_DIR` 在构建时复制进来：`cp "$FONTS_DIR"/*.ttf scenes/fonts/`。
 
-**验证**：截帧后用 vision_analyze 检查中间帧，确认中文文字不是方块。
+**验证**：截帧后抽查中间帧，确认中文不是方块。
 
 ## TTS 语音选择
 
 **User 不喜欢机械音。** 优先级：
 
-1. **MiniMax T2A**（your_voice_id 青年大学生）— 最自然的中文语音，API直接生成MP3
-2. **edge-tts zh-CN-YunxiNeural**（男声）— 比 XiaoyiNeural 自然，适合学长人设
+1. **edge-tts zh-CN-YunxiNeural**（男声，默认，免费）— 比 XiaoyiNeural 自然
+2. **MiniMax T2A**（需要 API key 和自己的 voice_id）— 更自然，按量付费，见 `minimax-tts-api.md`
 3. edge-tts zh-CN-XiaoyiNeural（女声）— 备选，偏机械
 
 edge-tts 分段生成时建议 `--rate="+5%"` 让语速稍快更像真人聊天。

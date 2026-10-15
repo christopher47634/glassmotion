@@ -44,7 +44,7 @@ context必含：
 - 长文本（>100字）必须用 --file
 
 ### Step 4: 截帧+合成
-- Playwright/Puppeteer fps=15, viewport 1080×1920
+- Playwright（scripts/capture-template.py）fps=15, viewport 1080×1920
 - FFmpeg concat拼接
 - ASS字幕烧入（ZCOOL KuaiLe 58px, fontsdir=/tmp）
 - 1.2x加速（setpts+atempo+字幕÷1.2）

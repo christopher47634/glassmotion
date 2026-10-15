@@ -9,7 +9,7 @@
 ## 三层架构
 
 ```
-~/course-studio/
+<project>/
 ├── core/                    # 基础动画层（所有视频共用）
 │   └── engine.html          # 8个组件，API挂window
 ├── layers/                  # 工具UI组件（模拟录屏画面）
