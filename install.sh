@@ -1,189 +1,100 @@
 #!/usr/bin/env bash
-# GlassMotion — One-click installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/christopher47634/glassmotion/main/install.sh | bash
+# GlassMotion installer
+#
+# Recommended (pinned, reviewable):
+#   git clone --depth 1 --branch v1.1.0 https://github.com/christopher47634/glassmotion.git
+#   cd glassmotion && ./install.sh
+#
+# Options:
+#   --dest DIR      skills target directory (default: $HERMES_HOME/skills or ~/.hermes/skills)
+#   --with-deps     create a Python venv at ~/.glassmotion/venv with playwright + faster-whisper
+#                   and download Playwright's Chromium
+#   --dry-run       print what would be copied, change nothing
+#
+# The script never prompts and exits non-zero on the first failure, so it is safe
+# to run non-interactively. It only copies files from the directory it lives in;
+# it does not download skill files from GitHub.
 
 set -euo pipefail
 
-REPO="christopher47634/glassmotion"
-BRANCH="main"
-HERMES_SKILLS_DIR="${HERMES_HOME:-$HOME/.hermes}/skills"
-GLASSMOTION_SKILLS=("mode2-hyperframes" "popular-science-video-style" "macos-claude-ui")
+SKILLS=("mode2-hyperframes" "popular-science-video-style" "macos-claude-ui")
+DEST="${HERMES_HOME:-$HOME/.hermes}/skills"
+WITH_DEPS=false
+DRY_RUN=false
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+info() { printf '[INFO] %s\n' "$*"; }
+ok()   { printf '[OK] %s\n' "$*"; }
+warn() { printf '[WARN] %s\n' "$*" >&2; }
+die()  { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
 
-info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
-ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
-fail()  { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dest)      [ $# -ge 2 ] || die "--dest needs a directory"; DEST="$2"; shift 2 ;;
+        --with-deps) WITH_DEPS=true; shift ;;
+        --dry-run)   DRY_RUN=true; shift ;;
+        -h|--help)   sed -n '2,17p' "$0"; exit 0 ;;
+        *)           die "unknown option: $1 (see --help)" ;;
+    esac
+done
 
-echo ""
-echo -e "${CYAN}  ┌─────────────────────────────────────┐${NC}"
-echo -e "${CYAN}  │  🪟  GlassMotion Installer            │${NC}"
-echo -e "${CYAN}  │  AI-Powered Video Engine             │${NC}"
-echo -e "${CYAN}  └─────────────────────────────────────┘${NC}"
-echo ""
+# The script must run from a checkout; piping it into bash has no skills to copy.
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+[ -d "$SRC/skills/mode2-hyperframes" ] || die "run ./install.sh from a cloned glassmotion repo (see the header of this file)"
 
-# ── Check prerequisites ──────────────────────────────────────────────
+if git -C "$SRC" rev-parse --git-dir >/dev/null 2>&1; then
+    info "source: $SRC @ $(git -C "$SRC" describe --tags --always --dirty 2>/dev/null || echo unknown)"
+fi
 
-check_cmd() {
-    if command -v "$1" &>/dev/null; then
-        ok "$1 found: $(command -v "$1")"
-        return 0
+# ── prerequisites (reported, not prompted) ──────────────────────────
+missing=()
+for cmd in python3 ffmpeg; do
+    command -v "$cmd" >/dev/null 2>&1 && ok "$cmd: $(command -v "$cmd")" || missing+=("$cmd")
+done
+if [ ${#missing[@]} -gt 0 ]; then
+    warn "missing: ${missing[*]} (needed to render videos, not to install skills)"
+    warn "  Ubuntu/Debian: sudo apt install ${missing[*]}    macOS: brew install ${missing[*]}"
+fi
+
+# ── copy skills ─────────────────────────────────────────────────────
+info "installing skills into $DEST"
+$DRY_RUN || mkdir -p "$DEST"
+for skill in "${SKILLS[@]}"; do
+    [ -f "$SRC/skills/$skill/SKILL.md" ] || die "skills/$skill/SKILL.md not found in $SRC"
+    if $DRY_RUN; then
+        echo "  would copy skills/$skill -> $DEST/$skill"
+        continue
+    fi
+    tmp="$DEST/.$skill.tmp.$$"
+    rm -rf "$tmp"
+    cp -R "$SRC/skills/$skill" "$tmp"
+    find "$tmp" -name '__pycache__' -type d -prune -exec rm -rf {} +
+    rm -rf "$DEST/$skill"
+    mv "$tmp" "$DEST/$skill"
+    ok "$skill"
+done
+
+# ── optional Python dependencies (isolated venv, never system pip) ──
+if $WITH_DEPS; then
+    command -v python3 >/dev/null 2>&1 || die "--with-deps needs python3"
+    VENV="$HOME/.glassmotion/venv"
+    if $DRY_RUN; then
+        echo "  would create $VENV and install playwright faster-whisper"
     else
-        warn "$1 not found"
-        return 1
+        info "creating venv $VENV"
+        python3 -m venv "$VENV" || die "python3 -m venv failed (Debian/Ubuntu: sudo apt install python3-venv)"
+        "$VENV/bin/pip" install --quiet --upgrade pip
+        "$VENV/bin/pip" install --quiet playwright faster-whisper
+        "$VENV/bin/python" -m playwright install chromium
+        ok "dependencies installed; use $VENV/bin/python to run the capture scripts"
     fi
-}
-
-info "Checking prerequisites..."
-
-MISSING=()
-check_cmd python3  || MISSING+=("python3")
-check_cmd node     || MISSING+=("node")
-check_cmd ffmpeg   || MISSING+=("ffmpeg")
-
-# Check Chromium (snap or system)
-if command -v chromium-browser &>/dev/null || command -v chromium &>/dev/null || [ -f /snap/chromium/current/usr/lib/chromium-browser/chrome ]; then
-    ok "Chromium found"
-else
-    warn "Chromium not found (needed for frame capture)"
-    MISSING+=("chromium")
 fi
 
-# Check Hermes Agent
-if command -v hermes &>/dev/null; then
-    ok "Hermes Agent found"
-    HAS_HERMES=true
-else
-    warn "Hermes Agent not found — installing skills manually"
-    HAS_HERMES=false
+echo
+ok "GlassMotion installed"
+echo "  Skills: $DEST/{$(IFS=,; echo "${SKILLS[*]}")}"
+if ! $WITH_DEPS; then
+    echo "  Render dependencies: re-run with --with-deps, or install playwright + faster-whisper yourself."
 fi
-
-if [ ${#MISSING[@]} -gt 0 ]; then
-    echo ""
-    warn "Missing dependencies: ${MISSING[*]}"
-    echo "  Install them first:"
-    echo "    Ubuntu/Debian: sudo apt install python3 nodejs ffmpeg chromium-browser"
-    echo "    macOS:         brew install python3 node ffmpeg"
-    echo ""
-    read -p "Continue anyway? [y/N] " -n 1 -r
-    echo
-    [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+if command -v hermes >/dev/null 2>&1; then
+    echo "  Try: hermes -s mode2-hyperframes \"做一个关于 GPT-5 的科普短视频\""
 fi
-
-# ── Install skills ───────────────────────────────────────────────────
-
-echo ""
-info "Installing GlassMotion skills..."
-
-if [ "$HAS_HERMES" = true ]; then
-    # Method 1: Install via Hermes skill system
-    for skill in "${GLASSMOTION_SKILLS[@]}"; do
-        SKILL_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/${skill}/SKILL.md"
-        info "Installing ${skill}..."
-        hermes skills install "$SKILL_URL" --name "$skill" 2>/dev/null && ok "$skill installed" || warn "$skill — install manually if needed"
-    done
-    
-    # Download supporting files (scripts, references, templates)
-    for skill in "${GLASSMOTION_SKILLS[@]}"; do
-        TARGET_DIR="${HERMES_SKILLS_DIR}/${skill}"
-        if [ -d "$TARGET_DIR" ]; then
-            info "Downloading supporting files for ${skill}..."
-            
-            # Download references
-            for ref_dir in references scripts templates demo; do
-                # Get file list from GitHub API
-                FILES=$(curl -s "https://api.github.com/repos/${REPO}/contents/skills/${skill}/${ref_dir}" 2>/dev/null | python3 -c "
-import json, sys
-try:
-    data = json.load(sys.stdin)
-    if isinstance(data, list):
-        for f in data:
-            if f.get('type') == 'file':
-                print(f['name'])
-except: pass
-" 2>/dev/null || true)
-                
-                if [ -n "$FILES" ]; then
-                    mkdir -p "${TARGET_DIR}/${ref_dir}"
-                    while IFS= read -r fname; do
-                        [ -z "$fname" ] && continue
-                        curl -sL "https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/${skill}/${ref_dir}/${fname}" \
-                            -o "${TARGET_DIR}/${ref_dir}/${fname}" 2>/dev/null
-                    done <<< "$FILES"
-                    ok "  ${skill}/${ref_dir}/ downloaded"
-                fi
-            done
-        fi
-    done
-    
-else
-    # Method 2: Manual install (clone repo)
-    INSTALL_DIR="$HOME/glassmotion"
-    info "Cloning repository to ${INSTALL_DIR}..."
-    
-    if [ -d "$INSTALL_DIR" ]; then
-        warn "Directory exists, updating..."
-        cd "$INSTALL_DIR" && git pull -q
-    else
-        git clone -q "https://github.com/${REPO}.git" "$INSTALL_DIR"
-    fi
-    
-    # Copy skills to Hermes skills directory (if it exists)
-    if [ -d "$HERMES_SKILLS_DIR" ]; then
-        for skill in "${GLASSMOTION_SKILLS[@]}"; do
-            if [ -d "$INSTALL_DIR/skills/${skill}" ]; then
-                cp -r "$INSTALL_DIR/skills/${skill}" "$HERMES_SKILLS_DIR/"
-                ok "Copied ${skill} to ${HERMES_SKILLS_DIR}/"
-            fi
-        done
-    fi
-    
-    ok "Repository cloned to ${INSTALL_DIR}"
-    echo "  Skills are in: ${INSTALL_DIR}/skills/"
-fi
-
-# ── Install Node.js dependencies (if needed) ─────────────────────────
-
-if command -v npm &>/dev/null; then
-    info "Checking Node.js dependencies..."
-    npm install -g puppeteer-core 2>/dev/null && ok "puppeteer-core installed" || ok "puppeteer-core already available"
-fi
-
-# ── Install Python dependencies ──────────────────────────────────────
-
-info "Checking Python dependencies..."
-pip3 install --quiet faster-whisper 2>/dev/null && ok "faster-whisper installed" || ok "faster-whisper already available"
-
-# ── Done ─────────────────────────────────────────────────────────────
-
-echo ""
-echo -e "${GREEN}  ┌─────────────────────────────────────┐${NC}"
-echo -e "${GREEN}  │  ✅  GlassMotion installed!           │${NC}"
-echo -e "${GREEN}  └─────────────────────────────────────┘${NC}"
-echo ""
-echo "  Quick start:"
-echo ""
-
-if [ "$HAS_HERMES" = true ]; then
-    echo "    # Load the skill and describe your video:"
-    echo "    hermes -s mode2-hyperframes \"做一个关于GPT-5的科普短视频\""
-    echo ""
-    echo "    # Or use the popular science style:"
-    echo "    hermes -s popular-science-video-style \"做一个Claude新模型的科普\""
-else
-    echo "    # Edit a scene template:"
-    echo "    cd ~/glassmotion && vim skills/mode2-hyperframes/templates/starter.html"
-    echo ""
-    echo "    # For full AI-powered workflow, install Hermes Agent:"
-    echo "    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash"
-fi
-
-echo ""
-echo "  📖 Documentation: https://github.com/${REPO}"
-echo ""

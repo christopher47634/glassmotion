@@ -12,7 +12,7 @@
 
 ---
 
-https://github.com/user-attachments/assets/xxxxxxxxxxxx
+▶️ [观看演示视频 / Watch the demo (examples/fable5-demo.mp4, 47s)](examples/fable5-demo.mp4)
 
 </div>
 
@@ -36,7 +36,7 @@ GlassMotion 是一个 **AI 驱动的视频生产引擎**，让你只需要描述
 |:---|:---|
 | 🎨 **玻璃拟态设计系统** | 深色科技风 + 光球/粒子/扫描线三层动态背景 + 毛玻璃卡片 + 霓虹强调色 |
 | 🤖 **AI 全自动写码** | 你描述场景，AI 自动生成完整 HTML/CSS 动画代码 |
-| 🎬 **逐帧渲染引擎** | Playwright/Puppeteer 逐帧截取 → FFmpeg 合成，保证动画丝滑 |
+| 🎬 **逐帧渲染引擎** | Playwright 逐帧截取（seekTo 纯函数驱动，可复现）→ FFmpeg 合成 |
 | 🗣️ **TTS 语音合成** | Edge-TTS / MiniMax 自动生成配音，支持中英文多音色 |
 | 📝 **智能字幕对齐** | Whisper 词级时间戳驱动，告别「字幕和语音对不上」 |
 | ⚡ **1.2x 智能加速** | 自动加速最终视频，节奏紧凑不拖沓 |
@@ -140,7 +140,7 @@ No After Effects. No Premiere. No video editing experience required.
 |:---|:---|
 | 🎨 **Glassmorphism Design System** | Dark tech aesthetic + 3-layer dynamic backgrounds (orbs/particles/scanlines) + frosted glass cards + neon accents |
 | 🤖 **AI Code Generation** | Describe a scene, AI generates complete HTML/CSS animation code |
-| 🎬 **Frame-by-Frame Rendering** | Playwright/Puppeteer capture → FFmpeg encode for buttery-smooth output |
+| 🎬 **Frame-by-Frame Rendering** | Playwright capture driven by a pure `seekTo(t)` (reproducible) → FFmpeg encode |
 | 🗣️ **TTS Voice Synthesis** | Edge-TTS / MiniMax auto-generates voiceovers in multiple languages and voices |
 | 📝 **Smart Subtitle Alignment** | Whisper word-level timestamp driven — subtitles always match speech |
 | ⚡ **1.2x Smart Speed** | Auto-speeds final video for tight, engaging pacing |
@@ -210,60 +210,61 @@ User describes what they want
 
 ## 🚀 Getting Started
 
-> **前置依赖**: Node.js, Python 3, FFmpeg, Chromium
+> **前置依赖**: Python 3, FFmpeg；截帧用 Playwright（`./install.sh --with-deps` 会装进独立 venv）；跑仓库自带 lint/测试需要 Node 18+
 
-### 一键安装（推荐）
+### 安装（推荐：固定版本）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/christopher47634/glassmotion/main/install.sh | bash
+git clone --depth 1 --branch v1.1.0 https://github.com/christopher47634/glassmotion.git
+cd glassmotion
+./install.sh                 # 把 3 个 skill 复制到 $HERMES_HOME/skills（默认 ~/.hermes/skills）
+./install.sh --with-deps     # 另外创建 ~/.glassmotion/venv，安装 playwright + faster-whisper 和 Chromium
+./install.sh --dest DIR      # 装到别的 skills 目录；--dry-run 只打印不改动
 ```
+
+`install.sh` 只从本地 checkout 复制文件，不联网下载 skill、不弹交互提示，任一步失败即以非零退出码结束。
+不建议 `curl … | bash`：先 clone 下来看过脚本再运行。
 
 安装完成后，直接用自然语言描述你的视频需求：
 
 ```bash
-# 加载 skill，描述需求
 hermes -s mode2-hyperframes "做一个关于GPT-5的科普短视频，45秒，深色科技风"
-
-# 或使用科普视频默认风格
 hermes -s popular-science-video-style "做一个Claude新模型的科普"
 ```
 
-### 通过 Hermes Skills 安装
-
-如果你已经安装了 [Hermes Agent](https://github.com/NousResearch/hermes-agent)：
+### 不用 Hermes，手动渲染
 
 ```bash
-hermes skills install https://raw.githubusercontent.com/christopher47634/glassmotion/main/skills/mode2-hyperframes/SKILL.md
+cp skills/mode2-hyperframes/templates/starter.html my-video/scenes.html
+cp skills/mode2-hyperframes/scripts/seek-animation.js my-video/   # 并把 starter 里的 src 改成 seek-animation.js
+cd my-video
+edge-tts --file script.txt --voice zh-CN-YunxiNeural --write-media vo.mp3 --write-subtitles vo.vtt
+python3 ../skills/mode2-hyperframes/scripts/capture-template.py scenes.html --vtt vo.vtt --out frames
+bash ../skills/mode2-hyperframes/scripts/nvenc-template.sh frames vo.mp3 out.mp4   # 无 NVIDIA GPU：ENCODER=libx264
 ```
 
-### 手动安装（无需 Hermes）
-
-```bash
-# 克隆仓库
-git clone https://github.com/christopher47634/glassmotion.git
-cd glassmotion
-
-# 编辑你的场景 HTML
-vim skills/mode2-hyperframes/templates/starter.html
-
-# 按照 skills/mode2-hyperframes/SKILL.md 的流程渲染
-```
+完整流程见 `skills/mode2-hyperframes/SKILL.md`。
 
 ## 📁 Project Structure
 
 ```
 glassmotion/
-├── README.md              # 你正在看的这个
+├── install.sh                       # 本地 checkout 安装脚本
+├── LICENSE                          # MIT
 ├── examples/
-│   ├── fable5-demo.mp4    # 完整演示视频
-│   └── frame-*.png        # 场景截图
+│   ├── fable5-demo.mp4              # 完整演示视频
+│   └── frame-*.png                  # 场景截图
 ├── skills/
-│   ├── mode2-hyperframes/         # 核心引擎 skill
-│   ├── popular-science-video-style/  # 科普视频默认风格
-│   └── macos-claude-ui/          # macOS 界面模拟
-├── render.py              # 渲染脚本
-└── templates/
-    └── dark-tech/         # 深色科技风模板
+│   ├── mode2-hyperframes/           # 核心引擎 skill
+│   │   ├── SKILL.md
+│   │   ├── references/              # 主题文档，索引见 references/INDEX.md
+│   │   ├── scripts/                 # seek-animation.js、capture-template.py 等
+│   │   ├── templates/starter.html   # 场景起手模板
+│   │   └── demo/                    # 交互动效演示页（仅预览）
+│   ├── popular-science-video-style/ # 科普视频默认风格
+│   └── macos-claude-ui/             # macOS 界面模拟
+├── scripts/                         # lint-html.mjs、psnr-compare.mjs
+└── test/                            # npm test
 ```
 
 ## 🧪 渲染前 lint 与 PSNR 回归
@@ -316,7 +317,7 @@ node scripts/psnr-compare.mjs baseline.mp4 new.mp4 --threshold 25
 
 | 标题卡 | 功能展示 | 价格对比 | 虚拟录屏 | 结尾 |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="examples/frame-01.png" width="140"/> | <img src="examples/frame-02.png" width="140"/> | <img src="examples/frame-03.png" width="140"/> | <img src="examples/frame-05.png" width="140"/> | <img src="examples/frame-05.png" width="140"/> |
+| <img src="examples/frame-01.png" width="140"/> | <img src="examples/frame-02.png" width="140"/> | <img src="examples/frame-03.png" width="140"/> | <img src="examples/frame-04.png" width="140"/> | <img src="examples/frame-05.png" width="140"/> |
 
 </div>
 
@@ -336,7 +337,7 @@ node scripts/psnr-compare.mjs baseline.mp4 new.mp4 --threshold 25
 
 ## 📄 License
 
-MIT License. 自由使用，自由修改，自由分享。
+[MIT License](LICENSE). 自由使用，自由修改，自由分享。
 
 ---
 
