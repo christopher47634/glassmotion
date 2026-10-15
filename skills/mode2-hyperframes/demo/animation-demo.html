@@ -786,7 +786,7 @@
         </div>
     </footer>
 
-    <script src="../scripts/animation-library.js"></script>
+    <script src="../scripts/interactive-animation.js"></script>
     <script>
         // 初始化GSAP
         gsap.registerPlugin(ScrollTrigger);
@@ -819,7 +819,7 @@
                         const delay = parseFloat(el.dataset.delay) || 0;
                         
                         // 使用GSAP动画库
-                        Mode2Animation.containerEntrance(el, {
+                        GMLive.containerEntrance(el, {
                             delay: delay,
                             duration: 0.8,
                             ease: "back.out(1.7)"
@@ -850,7 +850,7 @@
                         const el = entry.target;
                         const target = parseInt(el.dataset.count);
                         
-                        Mode2Animation.numberCounter(el, target, 1.5);
+                        GMLive.numberCounter(el, target, 1.5);
                         
                         observer.unobserve(el);
                     }
@@ -870,7 +870,7 @@
                         const bar = entry.target;
                         const width = bar.dataset.width;
                         
-                        Mode2Animation.progressBar(bar, width, 1.2);
+                        GMLive.progressBar(bar, width, 1.2);
                         
                         observer.unobserve(bar);
                     }
@@ -941,10 +941,10 @@
                 
                 if (!instant) {
                     // 使用动画库的场景切换
-                    Mode2Animation.showScene(sceneIndex - 1, false);
+                    GMLive.showScene(sceneIndex - 1, false);
                 } else {
                     // 瞬间切换（兼容截帧）
-                    Mode2Animation.showScene(sceneIndex - 1, true);
+                    GMLive.showScene(sceneIndex - 1, true);
                 }
             }
         }

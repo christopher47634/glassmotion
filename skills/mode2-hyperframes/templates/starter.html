@@ -2,108 +2,96 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
+  <!--
+    GlassMotion 场景起手模板（竖屏 1080×1920）。
+    画面完全由 window.seekTo(t) 决定（t 的纯函数），不使用 CSS animation / 定时器，
+    可被 scripts/capture-template.py 逐帧截图。规则见 references/seekto-runtime.md。
+    复制到项目目录时，把 seek-animation.js 一起复制，并改下面的 src。
+  -->
+  <script src="../scripts/seek-animation.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+    html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0a0a14; }
     #stage {
-      width: 1920px;
-      height: 1080px;
+      width: 1080px; height: 1920px; position: relative; overflow: hidden;
       background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
-      position: relative;
-      overflow: hidden;
-      font-family: 'LXGW WenKai', 'Chakra Petch', sans-serif;
+      font-family: 'LXGW WenKai', 'ZCOOL KuaiLe', sans-serif;
     }
-    
-    /* 粒子背景 */
+    /* 粒子背景：位移由 seekTo 计算 */
     .particles {
-      position: absolute;
-      width: 100%; height: 100%;
-      background-image: 
+      position: absolute; left: 0; top: 0; width: 100%; height: calc(100% + 200px);
+      background-image:
         radial-gradient(2px 2px at 20px 30px, rgba(0,240,255,0.3), transparent),
         radial-gradient(2px 2px at 40px 70px, rgba(0,240,255,0.2), transparent),
         radial-gradient(2px 2px at 50px 160px, rgba(0,240,255,0.4), transparent);
-      background-size: 200px 200px;
-      animation: float 20s linear infinite;
-      opacity: 0.5;
+      background-size: 200px 200px; opacity: 0.5;
     }
-    @keyframes float { from { transform: translateY(0); } to { transform: translateY(-200px); } }
-    
-    /* 主标题 */
-    .title {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 72px; font-weight: 700;
-      color: #fff;
-      text-shadow: 0 0 20px rgba(0,240,255,0.5);
-      text-align: center;
-      opacity: 0;
-      animation: fadeInUp 1s ease-out 0.5s forwards;
+    .scene { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 48px; padding: 80px 120px 180px; }
+    .title { font-size: 88px; font-weight: 700; color: #fff; text-shadow: 0 0 20px rgba(0,240,255,0.5); text-align: center; opacity: 0; }
+    .sub { font-size: 44px; color: #00F0FF; text-align: center; opacity: 0; }
+    .card {
+      width: 100%; padding: 40px 48px; border-radius: 24px; opacity: 0;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: #e6edf3; font-size: 44px;
     }
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translate(-50%, -40%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
-    }
-    
-    /* 副标题 */
-    .subtitle {
-      position: absolute;
-      top: 65%; left: 50%;
-      transform: translateX(-50%);
-      font-size: 36px; color: #00F0FF;
-      text-align: center;
-      opacity: 0;
-      animation: fadeIn 1s ease-out 1.5s forwards;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    
-    /* 角落装饰 */
-    .corner {
-      position: absolute; width: 80px; height: 80px;
-      border-color: #00F0FF; border-style: solid; border-width: 0; opacity: 0.5;
-    }
+    .deco-line { height: 2px; width: 0; background: linear-gradient(90deg, transparent, #00F0FF, transparent); opacity: 0.6; }
+    .corner { position: absolute; width: 80px; height: 80px; border-color: #00F0FF; border-style: solid; border-width: 0; opacity: 0.5; }
     .corner.tl { top: 20px; left: 20px; border-top-width: 2px; border-left-width: 2px; }
     .corner.tr { top: 20px; right: 20px; border-top-width: 2px; border-right-width: 2px; }
     .corner.bl { bottom: 20px; left: 20px; border-bottom-width: 2px; border-left-width: 2px; }
     .corner.br { bottom: 20px; right: 20px; border-bottom-width: 2px; border-right-width: 2px; }
-    
-    /* 装饰线 */
-    .deco-line {
-      position: absolute;
-      background: linear-gradient(90deg, transparent, #00F0FF, transparent);
-      height: 2px; left: 10%; width: 0; opacity: 0.6;
-      animation: expandWidth 1s ease-out 2s forwards;
+    #subtitleText {
+      position: absolute; left: 60px; right: 60px; bottom: 120px; text-align: center;
+      font-size: 58px; line-height: 1.5; color: #fff; opacity: 0;
+      -webkit-text-stroke: 0; text-shadow: 0 0 3px #000, 0 0 3px #000;
     }
-    .deco-line.top { top: 15%; }
-    .deco-line.bottom { bottom: 15%; }
-    @keyframes expandWidth { from { width: 0; } to { width: 80%; } }
   </style>
 </head>
 <body>
-  <!-- 舞台：data 属性定义视频元数据 -->
-  <div id="stage" 
-       data-composition-id="main" 
-       data-start="0" 
-       data-duration="10" 
-       data-width="1920" 
-       data-height="1080" 
-       data-fps="30">
-    
-    <div class="particles"></div>
-    
-    <div class="title">示例标题</div>
-    <div class="subtitle">副标题文字</div>
-    
-    <div class="deco-line top"></div>
-    <div class="deco-line bottom"></div>
-    
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
-    
-    <!-- BGM -->
-    <!-- <audio src="/music/track.mp3" data-start="0" data-volume="0.08" loop></audio> -->
+  <div id="stage">
+    <div class="particles" id="particles"></div>
+
+    <div class="scene" id="s0">
+      <div class="title" data-delay="0.3" data-animation="fadeInUp">示例标题</div>
+      <div class="deco-line" id="decoLine"></div>
+      <div class="sub" data-delay="1.0" data-animation="fade">副标题文字</div>
+    </div>
+
+    <div class="scene" id="s1">
+      <div class="card" data-delay="0.2" data-animation="slideLeft">第一张卡片</div>
+      <div class="card" data-delay="0.55" data-animation="slideLeft">第二张卡片</div>
+      <div class="card" data-delay="0.9" data-animation="slideLeft">数字：<span id="counter">0</span>%</div>
+    </div>
+
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div id="subtitleText"></div>
   </div>
+
+  <script>
+    // 场景边界与字幕都应来自 VTT（见 SKILL.md「音频 VTT 是唯一时间基准」），这里是示例值。
+    const SCENE_BOUNDS = [{ start: 0, end: 4 }, { start: 4, end: 10 }];
+    const SUBTITLES = [[0.1, 3.5, '这是第一句字幕'], [4.0, 9.5, '这是第二句字幕']];
+
+    window.seekTo = function (t) {
+      const { index, local } = GMSeek.sceneAt(SCENE_BOUNDS, t);
+      GMSeek.showScene(document.querySelectorAll('.scene'), index);
+      const scene = document.getElementById('s' + index);
+      GMSeek.timeDriven(scene, local, { duration: 0.5 });
+
+      if (index === 0) {
+        const p = GMSeek.ease.power3Out(GMSeek.progress(local, 1.6, 1.0));
+        document.getElementById('decoLine').style.width = (80 * p) + '%';
+      }
+      if (index === 1) {
+        GMSeek.numberCounter('#counter', 95, local, { start: 1.2, duration: 1.5 });
+      }
+
+      // 环境微动：粒子按 t 匀速上移，200px 一个周期
+      document.getElementById('particles').style.transform = 'translateY(' + (-(t * 10) % 200) + 'px)';
+      GMSeek.subtitle('#subtitleText', SUBTITLES, t);
+    };
+    window.seekTo(0);
+  </script>
 </body>
 </html>
