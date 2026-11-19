@@ -18,6 +18,9 @@ export function lintHtml(html, { strict = false } = {}) {
 
   lines.forEach((text, i) => {
     const n = i + 1;
+    const trimmed = text.trim();
+    // 跳过纯注释行（JS //、CSS /* ... */、HTML <!-- ... -->），避免注释里的示例或禁用说明误报
+    if (/^(\/\/|\/\*.*\*\/$|<!--.*-->$)/.test(trimmed)) return;
     if (/Math\.random\s*\(/.test(text)) add("error", "no-math-random", n, "Math.random() 每次渲染结果不同，请改用固定种子/预置数组");
     if (/Date\.now\s*\(|new\s+Date\s*\(|performance\.now\s*\(/.test(text)) add("error", "no-wall-clock", n, "使用墙钟时间（Date/performance.now）会让逐帧截图不可复现，请用 seekTo(t) 驱动");
     if (/\b(setInterval|setTimeout)\s*\(/.test(text)) add("warn", "no-timers", n, "setTimeout/setInterval 依赖真实时间，截帧时可能错位");
@@ -27,7 +30,10 @@ export function lintHtml(html, { strict = false } = {}) {
       add("warn", "infinite-css", n, "CSS 无限循环动画，时长不固定（背景光球等装饰可忽略）");
     if (/animation-duration\s*:\s*auto/.test(text)) add("error", "fixed-duration", n, "animation-duration 不能为 auto");
     const m = text.match(/(?<![\w-])animation\s*:\s*([^;}]+)/);
-    if (m && !/\d*\.?\d+m?s\b/.test(m[1]) && !/var\(/.test(m[1])) add("error", "fixed-duration", n, `animation 简写未指定时长：${m[1].trim()}`);
+    const animVal = m ? m[1].trim() : "";
+    if (m && !/^(none|inherit|initial|unset|revert)(\s*!important)?$/i.test(animVal) && !/\d*\.?\d+m?s\b/.test(animVal) && !/var\(/.test(animVal)) {
+      add("error", "fixed-duration", n, `animation 简写未指定时长：${animVal}`);
+    }
     if (/<(video|audio)\b[^>]*\bautoplay\b/i.test(text)) add("warn", "no-autoplay", n, "媒体 autoplay 在截帧时不可控");
     const ext = text.match(/(?:src|href)\s*=\s*["'](?:https?:)?\/\/[^"']+["']|url\(\s*["']?(?:https?:)?\/\/[^)"']+/i);
     if (ext && !/<a\s/i.test(text)) add(strict ? "error" : "warn", "no-external", n, `外链资源 ${ext[0].slice(0, 80)}，渲染会受网络影响，建议本地化`);
