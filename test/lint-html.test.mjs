@@ -11,9 +11,11 @@ test("Math.random / Date.now / performance.now 报错", () => {
   assert.ok(rules("<script>t=new Date()</script>").includes("error:no-wall-clock"));
   assert.ok(rules("<script>t=performance.now()</script>").includes("error:no-wall-clock"));
 });
-test("animation 简写缺时长报错，带时长通过", () => {
+test("animation 简写缺时长报错，带时长或关键字重置（none/unset）通过", () => {
   assert.ok(rules(".a{animation: fade ease-out forwards;}\n@keyframes fade{}").includes("error:fixed-duration"));
   assert.deepEqual(rules(".a{animation: fade 1s ease-out forwards;}\n@keyframes fade{}"), []);
+  assert.deepEqual(rules(".a{animation: none !important;}\n@keyframes fade{}"), []);
+  assert.deepEqual(rules("// Math.random() 仅注释不误报\n/* Date.now() */"), []);
   assert.ok(rules(".a{animation-duration: auto}").includes("error:fixed-duration"));
 });
 test("timers / raf / 无限循环 / autoplay 仅警告", () => {

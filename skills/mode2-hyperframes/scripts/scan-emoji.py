@@ -8,19 +8,31 @@ Returns exit code 0 if no emoji found, 1 if emoji found.
 import sys
 import re
 
+def is_problematic_emoji(cp):
+    """Detect supplementary-plane emoji (U+1F000+) and common BMP emoji symbols (✅ ⚠ ✨ ⚡ ⭐ ⏰ ❤ 等)."""
+    if cp > 0xFFFF:
+        return True
+    return (
+        0x2600 <= cp <= 0x27BF  # Misc Symbols + Dingbats (⚠ ⚡ ✅ ✨ ❤ ...)
+        or 0x23E9 <= cp <= 0x23FA  # Media / clock symbols (⏰ ⏩ ...)
+        or cp in (0x2B50, 0x2B55)  # ⭐ ⭕
+    )
+
+
 def scan_emoji(html_path):
     with open(html_path, 'r', encoding='utf-8') as f:
         html = f.read()
     
-    # Remove style/script blocks
-    body = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL)
-    body = re.sub(r'<script[^>]*>.*?</script>', '', body, flags=re.DOTALL)
+    # Remove style/script/comment blocks
+    body = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r'<script[^>]*>.*?</script>', '', body, flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r'<!--.*?-->', '', body, flags=re.DOTALL)
     
-    # Find all emoji (supplementary planes)
+    # Find all emoji (supplementary planes + common BMP emoji)
     emoji_found = []
     for i, ch in enumerate(body):
         cp = ord(ch)
-        if cp > 0xFFFF:
+        if is_problematic_emoji(cp):
             # Get context
             start = max(0, i - 20)
             end = min(len(body), i + 20)
